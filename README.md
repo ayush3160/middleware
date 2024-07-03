@@ -1,6 +1,6 @@
 <br /><br />
 <p align="center">
-<a href="https://www.middlewarehq.com/"><img src="media_files/logo.png" alt="Middleware Logo" width=300px></a>
+<a href="https://www.middlewarehq.com/"><img src="https://github.com/middlewarehq/middleware/blob/main/media_files/logo.png" alt="Middleware Logo" width=300px></a>
 </p>
 
 <p align="center"><b>Open-source engineering management that unlocks developer potential</b></p>
@@ -16,7 +16,7 @@
 
 <!-- [Join our Engineering Leaders Community]() -->
 
-![Middleware Opensource](media_files/banner.gif)
+![Middleware Opensource](https://github.com/middlewarehq/middleware/blob/main/media_files/banner.gif)
 
 
 ## Introduction
@@ -43,6 +43,7 @@ They are:
   - [How we Calculate DORA](#-how-we-calculate-dora)
   - [Roadmap](#%EF%B8%8F-roadmap)
   - [Contributing guidelines](#%EF%B8%8F-contributing-guidelines)
+  - [Developer Automations](#-developer-automations)
   - [Security guidelines](#%EF%B8%8F-security-guidelines)
   - [License](#license)
 
@@ -259,7 +260,7 @@ To set up middleware locally, follow these steps:
       pip install -r requirements.txt -r dev-requirements.txt
       ```
 
-    - Create a `.env.local` file in the `/backend` directory and add the following environment variables, replacing the values with your own if needed:
+    - Create a `.env` file in the root directory and add the following environment variables, replacing the values with your own if needed:
 
       ```text
       DB_HOST=localhost
@@ -320,7 +321,7 @@ To set up middleware locally, follow these steps:
 
 # 🚀 Usage
 
-![Product Demo](media_files/product_demo_1.gif)
+![Product Demo](https://github.com/middlewarehq/middleware/blob/main/media_files/product_demo_1.gif)
 
 - Setup the project by following the [steps mentioned above](#-quick-start).
 - Generate and Add your PAT token from code provider.
@@ -371,6 +372,29 @@ To get started contributing to middleware check out our [CONTRIBUTING.md](https:
 
 We appreciate your contributions and look forward to working together to make Middleware even better!
 
+## 👨‍💻 Developer Automations
+
+This sections contains some automation scripts that can generate boilerplate code to extend certain features and ship faster 🚀
+
+### 1. Adding New Settings in Backend
+
+- Context: Initially, adding a new setting required context of the settings system, changes across some files and making adapters and defaults based on the new setting class structure.
+- This can now be done by running the `python make_new_setting.py` script in the `./backend/dev_scripts` directory
+
+If you are in the root directory, you can run:
+```
+python ./backend/dev_scripts/make_new_setting.py
+```
+
+- Enter the setting name in the consitent format.
+- Add the required keys and their types. Enter `done` once you have added all the fields.
+- Update imports and linting.
+- You are good to go :tada"
+- Note: For more non-primitive types in the setting such as uuid, enums etc, you will have to make changes to the generated adaptors.
+
+
+https://github.com/middlewarehq/middleware/assets/70485812/f0529fa7-a2cb-44b1-ae07-2a7c97f56bef
+
 # ⛓️ Security guidelines
 
 To get started contributing to middleware check out our [SECURITY.md](https://github.com/middlewarehq/middleware/blob/main/SECURITY.md).
@@ -384,4 +408,4 @@ This project is licensed under the [Apache 2.0](https://github.com/middlewarehq/
 
 
 
-![Banner](media_files/banner.png)
+![Banner](https://github.com/middlewarehq/middleware/blob/main/media_files/banner.png)

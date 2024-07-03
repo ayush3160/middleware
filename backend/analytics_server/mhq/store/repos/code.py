@@ -41,35 +41,26 @@ class CodeRepoService:
         return self.get_repos_by_ids([str(repo.id) for repo in org_repos])
 
     @rollback_on_exc
-    def update_team_repos(self, team: Team, org_repos: List[OrgRepo]):
-
-        existing_team_repos = self._db.session.query(TeamRepos).filter(
-            TeamRepos.team_id == team.id
+    def get_existing_team_repos(self, team: Team) -> List[TeamRepos]:
+        return (
+            self._db.session.query(TeamRepos).filter(TeamRepos.team_id == team.id).all()
         )
 
-        for team_repo in existing_team_repos:
-            team_repo.is_active = False
+    @rollback_on_exc
+    def get_team_repos_by_repo_id_for_team(
+        self, team_id: str, repo_ids: List[str]
+    ) -> List[TeamRepos]:
+        return (
+            self._db.session.query(TeamRepos)
+            .filter(TeamRepos.team_id == team_id, TeamRepos.org_repo_id.in_(repo_ids))
+            .all()
+        )
 
-        repo_id_to_team_repos_map = {
-            str(team_repo.org_repo_id): team_repo for team_repo in existing_team_repos
-        }
-
-        updated_team_repos = []
-        for repo in org_repos:
-            team_repo = repo_id_to_team_repos_map.get(str(repo.id))
-            if team_repo:
-                team_repo.is_active = True
-            else:
-                team_repo = TeamRepos(
-                    team_id=team.id,
-                    org_repo_id=str(repo.id),
-                    prod_branches=["^" + repo.default_branch + "$"]
-                    if repo.default_branch
-                    else None,
-                )
-
-            updated_team_repos.append(team_repo)
-
+    @rollback_on_exc
+    def update_team_repos(
+        self,
+        updated_team_repos: List[TeamRepos],
+    ):
         for team_repo in updated_team_repos:
             self._db.session.merge(team_repo)
 
@@ -339,6 +330,14 @@ class CodeRepoService:
         return self.get_repos_by_ids(team_repo_ids)
 
     @rollback_on_exc
+    def get_team_repos_by_team_id(self, team_id: str) -> List[TeamRepos]:
+        return (
+            self._db.session.query(TeamRepos)
+            .filter(and_(TeamRepos.team_id == team_id, TeamRepos.is_active == True))
+            .all()
+        )
+
+    @rollback_on_exc
     def get_merge_to_deploy_broker_bookmark(
         self, repo_id: str
     ) -> BookmarkMergeToDeployBroker:
@@ -385,6 +384,28 @@ class CodeRepoService:
             )
         )
         query = query.order_by(PullRequest.updated_at.desc())
+
+        return query.all()
+
+    @rollback_on_exc
+    def get_reverted_prs_by_merge_commit_hash(
+        self, repo_ids: List[str], merge_commit_hashes: List[str]
+    ) -> List[PullRequest]:
+        query = (
+            self._db.session.query(PullRequest)
+            .options(defer(PullRequest.data))
+            .filter(
+                and_(
+                    PullRequest.repo_id.in_(repo_ids),
+                    or_(
+                        *[
+                            PullRequest.merge_commit_sha.ilike(f"{merge_hash}%")
+                            for merge_hash in merge_commit_hashes
+                        ]
+                    ),
+                )
+            )
+        )
 
         return query.all()
 

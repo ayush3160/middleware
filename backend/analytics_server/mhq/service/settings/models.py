@@ -39,3 +39,12 @@ class IncidentTypesSetting(BaseSetting):
 @dataclass
 class IncidentSourcesSetting(BaseSetting):
     incident_sources: List[IncidentSource]
+
+
+# ADD NEW SETTING CLASS HERE
+
+# Sample Future Settings
+# @dataclass
+# class PRSettings(BaseSetting):
+#     number_filters: List[str]
+#     merge_time: List[str]

@@ -8,6 +8,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 
 import {
   AppStates,
+  ErrorCodes,
   LogSource,
   READY_MESSAGES,
   terminatedText
@@ -18,9 +19,10 @@ import {
 } from './hooks/useLogsFromAllSources.js';
 import { appSlice } from './slices/app.js';
 import { useSelector, store, useDispatch } from './store/index.js';
+import CircularBuffer from './utils/circularBuffer.js';
 import { getLineLimit } from './utils/line-limit.js';
 import { runCommand } from './utils/run-command.js';
-import CircularBuffer from './utils/circularBuffer.js';
+import { isLocalBranchBehindRemote } from './utils/update-checker.js';
 
 const CliUi = () => {
   const dispatch = useDispatch();
@@ -32,12 +34,24 @@ const CliUi = () => {
   useLogsFromAllSources();
 
   const [retryToggle, setRetryToggle] = useState<Boolean>(false);
+  const [isUpdateAvailable, setIsUpdateAvailable] = useState<string>('');
 
   const { exit } = useApp();
 
   const lineLimit = getLineLimit();
 
   const processRef = useRef<ChildProcessWithoutNullStreams | null>();
+
+  const frontend_port = process.env['PORT'];
+  const sync_server_port = process.env['SYNC_SERVER_PORT'];
+  const analytics_server_port = process.env['ANALYTICS_SERVER_PORT'];
+  const db_port = process.env['DB_PORT'];
+  const db_host = process.env['DB_HOST'];
+  const db_name = process.env['DB_NAME'];
+  const db_user = process.env['DB_USER'];
+  const db_pass = process.env['DB_PASS'];
+  const redis_port = process.env['REDIS_PORT'];
+  const redis_host = process.env['REDIS_HOST'];
 
   const runCommandOpts = useMemo<Parameters<typeof runCommand>['2']>(
     () => ({
@@ -67,7 +81,10 @@ const CliUi = () => {
               })
             )
           ),
-      log_buffer: new CircularBuffer<string>(10)
+      log_buffer: new CircularBuffer<string>(10),
+      options: {
+        env: process.env
+      }
     }),
 
     [dispatch, lineLimit]
@@ -82,13 +99,21 @@ const CliUi = () => {
       processRef.current.stdout.destroy();
       processRef.current.stderr.destroy();
 
-      runCommand('docker-compose', ['down'], runCommandOpts).promise.finally(
-        async () => {
+      runCommand('docker', ['compose', 'down'], runCommandOpts)
+        .promise.catch(async (err: any) => {
+          await runCommand('docker-compose', ['down']).promise;
+        })
+        .finally(async () => {
           await dispatch(appSlice.actions.setAppState(AppStates.TERMINATED));
-        }
-      );
+        });
     }, 200);
   }, [dispatch, runCommandOpts]);
+
+  const handleVersionUpdates = useCallback(async () => {
+    await isLocalBranchBehindRemote().then((res) => {
+      setIsUpdateAvailable(res);
+    });
+  }, [setIsUpdateAvailable]);
 
   useEffect(() => {
     if (appState !== AppStates.TERMINATED) return;
@@ -120,25 +145,72 @@ const CliUi = () => {
   });
 
   useEffect(() => {
+    handleVersionUpdates();
+  }, [handleVersionUpdates]);
+
+  useEffect(() => {
     const { process, promise } = runCommand(
-      'docker-compose',
-      ['watch'],
+      'docker',
+      ['compose', 'build'],
       runCommandOpts
     );
+
+    processRef.current = process;
 
     promise.catch((err) => {
       handleExit();
       dispatch(
         appSlice.actions.addLog({
           type: 'default',
-          line: `docker watch failed: ${err}`,
+          line: `docker compose build failed: ${err}`,
           time: new Date()
         })
       );
     });
+  }, []);
+
+  useEffect(() => {
+    const { process, promise } = runCommand(
+      'docker',
+      ['compose', 'watch'],
+      runCommandOpts
+    );
+
+    promise.catch((err) => {
+      if (err.errno == ErrorCodes.SpawnProcessCommandNotFound) {
+        const { process, promise } = runCommand(
+          'docker-compose',
+          ['watch'],
+          runCommandOpts
+        );
+
+        promise.catch((err) => {
+          handleExit();
+          dispatch(
+            appSlice.actions.addLog({
+              type: 'default',
+              line: `docker watch failed: ${err}`,
+              time: new Date()
+            })
+          );
+        });
+
+        processRef.current = process;
+        process?.stdout.on('data', lineListener);
+        process?.stderr.on('data', lineListener);
+      } else {
+        handleExit();
+        dispatch(
+          appSlice.actions.addLog({
+            type: 'default',
+            line: `docker watch failed: ${err}`,
+            time: new Date()
+          })
+        );
+      }
+    });
 
     processRef.current = process;
-
     const lineListener = async (data: Buffer) => {
       let watch_logs = String(data);
 
@@ -347,6 +419,13 @@ const CliUi = () => {
                       </Text>{' '}
                       exit
                     </Text>
+                    {Boolean(isUpdateAvailable) && (
+                      <>
+                        <Text bold color="yellow">
+                          {isUpdateAvailable}
+                        </Text>
+                      </>
+                    )}
                   </Box>
                 );
               case AppStates.TEARDOWN:
@@ -379,14 +458,16 @@ const CliUi = () => {
             <Text bold underline color="#7e57c2">
               Access Info
             </Text>
-            <Text bold>http://localhost:3333</Text>
-            <Text bold>http://localhost:9696</Text>
-            <Text bold>http://localhost:6380</Text>
-            <Text bold>http://localhost:5434</Text>
+            <Text bold>{`http://localhost:${frontend_port}`}</Text>
+            <Text bold>{`http://localhost:${analytics_server_port}`}</Text>
+            <Text bold>{`redis://${redis_host}:${redis_port}/0`}</Text>
+            <Text
+              bold
+            >{`postgresql://${db_user}:${db_pass}@${db_host}:${db_port}/${db_name}`}</Text>
             <Text bold color="grey">
               --
             </Text>
-            <Text bold>http://localhost:9697</Text>
+            <Text bold>{`http://localhost:${sync_server_port}`}</Text>
           </Box>
         )}
       </Box>

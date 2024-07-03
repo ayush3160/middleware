@@ -58,6 +58,8 @@ class SettingsService:
             ]
         )
 
+    # ADD NEW DICT TO DATACLASS ADAPTERS HERE
+
     def _handle_config_setting_from_db_setting(
         self, setting_type: SettingType, setting_data
     ):
@@ -74,6 +76,8 @@ class SettingsService:
 
         if setting_type == SettingType.INCIDENT_SOURCES_SETTING:
             return self._adapt_incident_source_setting_from_setting_data(setting_data)
+
+        # ADD NEW HANDLE FROM DB SETTINGS HERE
 
         raise Exception(f"Invalid Setting Type: {setting_type}")
 
@@ -147,6 +151,8 @@ class SettingsService:
             ]
         )
 
+    # ADD NEW DICT TO API ADAPTERS HERE
+
     def _handle_config_setting_from_json_data(
         self, setting_type: SettingType, setting_data
     ):
@@ -163,6 +169,8 @@ class SettingsService:
 
         if setting_type == SettingType.INCIDENT_TYPES_SETTING:
             return self._adapt_incident_types_setting_from_json(setting_data)
+
+        # ADD NEW HANDLE FROM JSON DATA HERE
 
         raise Exception(f"Invalid Setting Type: {setting_type}")
 
@@ -195,6 +203,8 @@ class SettingsService:
             ]
         }
 
+    # ADD NEW DATACLASS TO JSON DATA ADAPTERS HERE
+
     def _handle_config_setting_to_db_setting(
         self, setting_type: SettingType, specific_setting
     ):
@@ -218,6 +228,8 @@ class SettingsService:
             specific_setting, IncidentSourcesSetting
         ):
             return self._adapt_incident_source_setting_json_data(specific_setting)
+
+        # ADD NEW HANDLE TO DB SETTINGS HERE
 
         raise Exception(f"Invalid Setting Type: {setting_type}")
 
@@ -299,10 +311,10 @@ class SettingsService:
         settings: List[Settings] = self._settings_repo.get_settings(
             entity_id=entity_id, setting_types=setting_types, entity_type=entity_type
         )
-        setting_type_to_setting_map: Dict[
-            SettingType, Any
-        ] = self._get_setting_type_to_setting_map(
-            setting_types, settings, ignore_default_setting_type
+        setting_type_to_setting_map: Dict[SettingType, Any] = (
+            self._get_setting_type_to_setting_map(
+                setting_types, settings, ignore_default_setting_type
+            )
         )
 
         return setting_type_to_setting_map
@@ -319,9 +331,9 @@ class SettingsService:
 
         setting_type_to_setting_map: Dict[SettingType, Any] = {}
         for setting in settings:
-            setting_type_to_setting_map[
-                setting.setting_type
-            ] = self._adapt_config_setting_from_db_setting(setting).specific_settings
+            setting_type_to_setting_map[setting.setting_type] = (
+                self._adapt_config_setting_from_db_setting(setting).specific_settings
+            )
 
         for setting_type in setting_types:
             if (setting_type not in setting_type_to_setting_map) and (

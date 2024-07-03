@@ -32,6 +32,10 @@ export enum LogSource {
   DockerWatchProcessIdLock
 }
 
+export enum ErrorCodes {
+  SpawnProcessCommandNotFound = '-2'
+}
+
 export type LogEntry = {
   type:
     | 'data'
@@ -54,8 +58,8 @@ export const keysForLogSource = Object.entries(LogSource).reduce(
 );
 
 export const READY_MESSAGES = {
-  [LogSource.ApiServer]: `Listening at: http://127.0.0.1`,
-  [LogSource.SyncServer]: `Listening at: http://127.0.0.1`,
+  [LogSource.ApiServer]: `Listening at: http://0.0.0.0`,
+  [LogSource.SyncServer]: `Listening at: http://0.0.0.0`,
   [LogSource.WebServer]: [
     `Server started on http://localhost`,
     `http://localhost:`
